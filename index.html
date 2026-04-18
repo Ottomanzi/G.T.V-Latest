@@ -2,102 +2,86 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>GTV LATEST - PRO v5</title>
+    <title>GTV LATEST - ANTALYA RP v6</title>
     <style>
         body { margin: 0; overflow: hidden; background: #87ceeb; font-family: 'Arial', sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #00ff00; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 2px solid #00ff00; pointer-events: none; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00ff00; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 2px solid #00ff00; pointer-events: none; z-index: 100; }
         #para { font-size: 24px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div id="para">Nakit: $1,500</div>
-        <div style="color:white; font-size:12px;">GTV Antalya RP v5.0</div>
+        <div style="color:white; font-size:12px;">GTV Antalya RP v6.0 - Sistem Aktif</div>
     </div>
 
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.136.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.136.0/examples/jsm/"
+            }
+        }
+    </script>
+
     <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 10, 200);
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1); sunLight.position.set(50, 50, 50); scene.add(sunLight);
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+        scene.add(light);
 
-        // --- FİZİK VE ÇARPIŞMA LİSTESİ ---
-        const binalar = [];
-        const araSokakGenisligi = 15;
-
-        // Zemin ve Yol
+        // --- ZEMİN, YOL VE KALDIRIM ---
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
         ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(22, 1000), new THREE.MeshPhongMaterial({ color: 0x111111 }));
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 1000), new THREE.MeshPhongMaterial({ color: 0x111111 }));
         road.rotation.x = -Math.PI / 2; road.position.y = 0.05; scene.add(road);
 
-        // Yaya Geçidi
-        const zebraGeo = new THREE.PlaneGeometry(22, 4);
-        const zebraMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
-        const zebra = new THREE.Mesh(zebraGeo, zebraMat);
-        zebra.rotation.x = -Math.PI / 2; zebra.position.set(0, 0.07, -50); scene.add(zebra);
-
-        // Kaldırımlar (Yoldan yüksek)
-        const curbGeo = new THREE.BoxGeometry(8, 0.4, 1000);
+        const curbGeo = new THREE.BoxGeometry(6, 0.4, 1000);
         const curbMat = new THREE.MeshPhongMaterial({ color: 0x999999 });
-        const curbL = new THREE.Mesh(curbGeo, curbMat); curbL.position.set(-15, 0.2, 0); scene.add(curbL);
-        const curbR = new THREE.Mesh(curbGeo, curbMat); curbR.position.set(15, 0.2, 0); scene.add(curbR);
+        const curbL = new THREE.Mesh(curbGeo, curbMat); curbL.position.set(-13, 0.2, 0); scene.add(curbL);
+        const curbR = new THREE.Mesh(curbGeo, curbMat); curbR.position.set(13, 0.2, 0); scene.add(curbR);
 
-        // --- BİNA YAPIMI ---
+        // --- BİNALAR ---
+        const binalar = [];
         function createBuilding(x, z, rot) {
             const h = 15 + Math.random() * 10;
-            const group = new THREE.Group();
             const body = new THREE.Mesh(new THREE.BoxGeometry(10, h, 10), new THREE.MeshPhongMaterial({ color: 0xaaaaaa }));
-            body.position.y = h/2; group.add(body);
-
-            // Pencereler (Binaya yapışık)
-            for(let y=4; y<h-2; y+=4) {
-                const win = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2), new THREE.MeshPhongMaterial({ color: 0x87ceeb }));
-                win.position.set(0, y, 5.01); group.add(win);
-            }
-
-            group.position.set(x, 0, z); group.rotation.y = rot;
-            scene.add(group);
+            body.position.set(x, h/2, z);
+            body.rotation.y = rot;
+            scene.add(body);
             binalar.push(new THREE.Box3().setFromObject(body));
         }
 
-        for(let i=0; i<20; i++) {
-            if(i % 4 === 0) continue; // Ara sokak
-            createBuilding(-25, -i*12, Math.PI/2);
-            createBuilding(25, -i*12, -Math.PI/2);
+        for(let i=0; i<30; i++) {
+            if(i % 5 === 0) continue; 
+            createBuilding(-21, -i*12 + 100, 0);
+            createBuilding(21, -i*12 + 100, 0);
         }
 
-        // --- DİNAMİK KARAKTER ---
+        // --- KARAKTER VE KAMERA ---
         const player = new THREE.Group();
         const pBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshPhongMaterial({color: 0x0055ff}));
         pBody.position.y = 0.9; player.add(pBody);
-        const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshPhongMaterial({color: 0xffdbac}));
-        pHead.position.y = 1.7; player.add(pHead);
-        
-        // Kollar
-        const armGeo = new THREE.CapsuleGeometry(0.1, 0.6, 4, 8);
-        const armL = new THREE.Mesh(armGeo, new THREE.MeshPhongMaterial({color: 0xffdbac}));
-        armL.position.set(-0.6, 1.2, 0); player.add(armL);
-        const armR = armL.clone(); armR.position.x = 0.6; player.add(armR);
-
         scene.add(player);
-
-        // --- KONTROLLER VE FİZİK ---
-        let keys = {};
-        document.onkeydown = (e) => keys[e.code] = true;
-        document.onkeyup = (e) => keys[e.code] = false;
 
         let yaw = 0;
         document.addEventListener('mousemove', (e) => { if(document.pointerLockElement) yaw -= e.movementX * 0.003; });
         document.addEventListener('click', () => document.body.requestPointerLock());
+
+        let keys = {};
+        document.onkeydown = (e) => keys[e.code] = true;
+        document.onkeyup = (e) => keys[e.code] = false;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -107,24 +91,13 @@
             if (keys['KeyW']) { player.position.x += Math.sin(yaw) * speed; player.position.z += Math.cos(yaw) * speed; }
             if (keys['KeyS']) { player.position.x -= Math.sin(yaw) * speed; player.position.z -= Math.cos(yaw) * speed; }
             
-            player.rotation.y = yaw;
+            // Çarpışma Kontrolü
+            let pBox = new THREE.Box3().setFromObject(player);
+            for(let b of binalar) { if(pBox.intersectsBox(b)) player.position.copy(oldPos); }
 
-            // 1. Çarpışma Algılama (Binaların içinden geçme)
-            let playerBox = new THREE.Box3().setFromObject(player);
-            for(let bina of binalar) {
-                if(playerBox.intersectsBox(bina)) {
-                    player.position.copy(oldPos); // Çarptıysa geri it
-                }
-            }
+            // Yükseklik Kontrolü (Kaldırım)
+            player.position.y = (Math.abs(player.position.x) > 10) ? 0.4 : 0;
 
-            // 2. Dinamik Yükseklik (Kaldırıma çıkma/inme)
-            if(Math.abs(player.position.x) > 11 && Math.abs(player.position.x) < 19) {
-                player.position.y = 0.4; // Kaldırım boyu
-            } else {
-                player.position.y = 0; // Yol boyu
-            }
-
-            // Kamera
             const camOffset = new THREE.Vector3(0, 4, 10).applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
             camera.position.copy(player.position).add(camOffset);
             camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
