@@ -2,34 +2,37 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>GTV LATEST - ANTALYA v10</title>
+    <title>GTV LATEST - ANTALYA v11</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Arial', sans-serif; }
         #ui { position: absolute; top: 20px; left: 20px; color: #00ff00; background: rgba(0,0,0,0.85); padding: 15px; border-radius: 10px; border: 2px solid #00ff00; z-index: 1000; }
         #para { font-size: 24px; font-weight: bold; }
+        #kontrol { position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.5); pointer-events: none; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div id="para">Nakit: $1,500</div>
-        <div style="color:white; font-size:12px;">Antalya RP v10.0 - Realistik Düzen</div>
+        <div style="color:white; font-size:12px;">Antalya RP v11.0 - Full Motion</div>
     </div>
+    <div id="kontrol">WASD ile Yürü | Mouse ile Dön</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         window.onload = () => {
+            // --- SAHNE VE IŞIK ---
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
-            scene.fog = new THREE.Fog(0x87ceeb, 10, 200);
+            scene.fog = new THREE.Fog(0x87ceeb, 10, 250);
 
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-            scene.add(light);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+            scene.add(hemiLight);
 
             // --- YOL VE KALDIRIM ---
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
@@ -43,20 +46,27 @@
             curbL.position.set(-14, 0.25, 0); scene.add(curbL);
             const curbR = curbL.clone(); curbR.position.x = 14; scene.add(curbR);
 
-            // --- BİTİŞİK VE YOLA BAKAN BİNALAR ---
+            // --- BİTİŞİK NİZAM BİNALAR VE PENCERELER ---
             const buildings = [];
-            function createBuilding(x, z, side) {
+            function createBuilding(x, z, side, color) {
                 const h = 15 + Math.random() * 10;
                 const group = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(10, h, 12), new THREE.MeshPhongMaterial({ color: 0x777777 }));
+                const bWidth = 10; // Bina genişliği
+
+                const body = new THREE.Mesh(new THREE.BoxGeometry(bWidth, h, 12), new THREE.MeshPhongMaterial({ color: color }));
                 body.position.y = h/2; group.add(body);
 
-                // Yola Bakan Pencereler
+                // *** ARTIK PENCERELER YAPAY VE HİZALI ***
+                const winMat = new THREE.MeshPhongMaterial({color: 0xffffcc, emissive: 0x222222});
+                const winGeo = new THREE.PlaneGeometry(1.5, 1.8);
+                
+                // side -1: Sol taraf (Pencereler yol yönüne, sağa bakmalı)
+                // side 1: Sağ taraf (Pencereler yol yönüne, sola bakmalı)
                 for(let row=1; row<h/4; row++) {
-                    const win = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshPhongMaterial({color: 0xffffcc}));
-                    // side -1 ise yol sağda, 1 ise yol solda
-                    win.position.set(side * 5.01, row*4, 0);
-                    win.rotation.y = Math.PI / 2;
+                    const win = new THREE.Mesh(winGeo, winMat);
+                    // Pencereleri binanın yola bakan cephesine (yan yüzeyine) yapıştır
+                    win.position.set(side * (bWidth / 2 + 0.01), row*4 + 1, 0);
+                    win.rotation.y = (side === -1) ? Math.PI/2 : -Math.PI/2;
                     group.add(win);
                 }
 
@@ -65,24 +75,25 @@
                 buildings.push(new THREE.Box3().setFromObject(body));
             }
 
-            // Binaları yola sıfır ve bitişik diziyoruz
-            for(let i=0; i<50; i++) {
-                if(i % 6 === 0) continue; // Ara sokak
-                createBuilding(-23, -i*12.1 + 100, 1);  // Sol taraf (Yol sağında kalıyor)
-                createBuilding(23, -i*12.1 + 100, -1); // Sağ taraf (Yol solunda kalıyor)
+            // Binaları yola sıfır ve bitişik diziyoruz (x koordinatı önemli)
+            for(let i=0; i<45; i++) {
+                if(i % 5 === 0) continue; // Ara sokaklar
+                createBuilding(-23.1, -i*12.01 + 100, -1, 0xaaaaaa); // Sol Taraf (Bina x=-23, genişlik 10, yol x=-10)
+                createBuilding(23.1, -i*12.01 + 100, 1, 0x777777);  // Sağ Taraf
             }
 
-            // --- İNSAN FORMUNDA KARAKTER ---
+            // --- İNSAN FORMUNDA VE HAREKETLİ KARAKTER ---
             const player = new THREE.Group();
             const skinMat = new THREE.MeshPhongMaterial({ color: 0xffdbac });
             const clothesMat = new THREE.MeshPhongMaterial({ color: 0x0055ff });
 
             // Gövde
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), clothesMat);
-            body.position.y = 1.4; player.add(body);
+            const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), clothesMat);
+            pBody.position.y = 1.4; player.add(pBody);
             // Kafa
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
-            head.position.y = 2.3; player.add(head);
+            const pHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
+            pHead.position.y = 2.3; player.add(pHead);
+            // *** ARTIK BU ORGANLAR HAREKETLİ ***
             // Kollar
             const armL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1, 0.25), skinMat);
             armL.position.set(-0.55, 1.4, 0); player.add(armL);
@@ -101,30 +112,38 @@
             document.addEventListener('click', () => renderer.domElement.requestPointerLock());
             document.addEventListener('mousemove', (e) => { if(document.pointerLockElement) yaw -= e.movementX * 0.003; });
 
+            // --- OYUN DÖNGÜSÜ ---
             function animate() {
                 requestAnimationFrame(animate);
-                let speed = 0.3; let oldPos = player.position.clone();
-                let moving = false;
+                let speed = 0.28; 
+                let oldPos = player.position.clone();
+                let isMoving = false;
 
-                if (keys['KeyW']) { player.position.x += Math.sin(yaw) * speed; player.position.z += Math.cos(yaw) * speed; moving = true; }
-                if (keys['KeyS']) { player.position.x -= Math.sin(yaw) * speed; player.position.z -= Math.cos(yaw) * speed; moving = true; }
+                if (keys['KeyW']) { player.position.x += Math.sin(yaw) * speed; player.position.z += Math.cos(yaw) * speed; isMoving = true; }
+                if (keys['KeyS']) { player.position.x -= Math.sin(yaw) * speed; player.position.z -= Math.cos(yaw) * speed; isMoving = true; }
+                if (keys['KeyA']) { player.position.x += Math.sin(yaw + Math.PI/2) * speed; player.position.z += Math.cos(yaw + Math.PI/2) * speed; isMoving = true; }
+                if (keys['KeyD']) { player.position.x += Math.sin(yaw - Math.PI/2) * speed; player.position.z += Math.cos(yaw - Math.PI/2) * speed; isMoving = true; }
                 
                 player.rotation.y = yaw;
 
-                // Animasyon
-                if(moving) {
-                    let t = Date.now() * 0.01;
+                // *** ARTIK KARAKTER HAREKET EDİNCE KOLLAR BACAKLAR SALLANACAK ***
+                if(isMoving) {
+                    const t = Date.now() * 0.01;
                     legL.rotation.x = Math.sin(t) * 0.5;
                     legR.rotation.x = Math.sin(t + Math.PI) * 0.5;
-                    armL.rotation.x = Math.sin(t + Math.PI) * 0.4;
-                    armR.rotation.x = Math.sin(t) * 0.4;
+                    armL.rotation.x = Math.sin(t + Math.PI) * 0.3;
+                    armR.rotation.x = Math.sin(t) * 0.3;
+                } else {
+                    // Duruyorsa bacakları ve kolları düze al
+                    legL.rotation.x = legR.rotation.x = armL.rotation.x = armR.rotation.x = 0;
                 }
 
                 // Çarpışma ve Yükseklik
                 let pBox = new THREE.Box3().setFromObject(player);
                 for(let b of buildings) { if(pBox.intersectsBox(b)) player.position.copy(oldPos); }
-                player.position.y = (Math.abs(player.position.x) > 10) ? 0.25 : 0;
+                player.position.y = (Math.abs(player.position.x) > 10.1) ? 0.25 : 0;
 
+                // Kamera (Third Person)
                 camera.position.set(player.position.x - Math.sin(yaw) * 12, player.position.y + 6, player.position.z - Math.cos(yaw) * 12);
                 camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
                 renderer.render(scene, camera);
