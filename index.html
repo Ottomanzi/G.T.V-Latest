@@ -2,109 +2,104 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>GTV LATEST - ANTALYA RP v6</title>
+    <title>GTV LATEST - ANTALYA RP v7</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87ceeb; font-family: 'Arial', sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #00ff00; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 2px solid #00ff00; pointer-events: none; z-index: 100; }
+        body { margin: 0; overflow: hidden; background-color: #87ceeb; font-family: 'Arial', sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00ff00; background: rgba(0,0,0,0.85); padding: 15px; border-radius: 10px; border: 2px solid #00ff00; z-index: 1000; }
         #para { font-size: 24px; font-weight: bold; }
+        #uyari { position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; background: rgba(0,0,0,0.5); pointer-events: none; }
     </style>
 </head>
 <body>
     <div id="ui">
         <div id="para">Nakit: $1,500</div>
-        <div style="color:white; font-size:12px;">GTV Antalya RP v6.0 - Sistem Aktif</div>
+        <div style="color:white; font-size:12px;">Antalya RP v7.0 - Motoru Çalıştır</div>
     </div>
+    <div id="uyari">Ekrana Tıkla ve WASD ile Yürü!</div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.136.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.136.0/examples/jsm/"
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // Usta, bu sefer "import" kullanmıyoruz ki tarayıcı naz yapmasın!
+        window.onload = () => {
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 10, 250);
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+            scene.add(light);
+
+            // Zemin ve Yol
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 1000), new THREE.MeshPhongMaterial({ color: 0x111111 }));
+            road.rotation.x = -Math.PI / 2; road.position.y = 0.05;
+            scene.add(road);
+
+            // Nizamlı Binalar
+            const buildings = [];
+            function createBuilding(x, z, color) {
+                const h = 15 + Math.random() * 10;
+                const body = new THREE.Mesh(new THREE.BoxGeometry(10, h, 10), new THREE.MeshPhongMaterial({ color: color }));
+                body.position.set(x, h/2, z);
+                scene.add(body);
+                buildings.push(new THREE.Box3().setFromObject(body));
             }
+
+            for(let i=0; i<40; i++) {
+                if(i % 5 === 0) continue;
+                createBuilding(-22, -i*12 + 100, 0xaaaaaa);
+                createBuilding(22, -i*12 + 100, 0x888888);
+            }
+
+            // Karakter (Kapsül)
+            const player = new THREE.Group();
+            const pBody = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 16), new THREE.MeshPhongMaterial({color: 0x0055ff}));
+            pBody.position.y = 0.75;
+            player.add(pBody);
+            scene.add(player);
+
+            let keys = {};
+            document.onkeydown = (e) => keys[e.code] = true;
+            document.onkeyup = (e) => keys[e.code] = false;
+
+            let yaw = 0;
+            document.addEventListener('click', () => { document.body.requestPointerLock(); });
+            document.addEventListener('mousemove', (e) => { if(document.pointerLockElement) yaw -= e.movementX * 0.003; });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                let speed = 0.25;
+                let oldPos = player.position.clone();
+
+                if(keys['KeyW']) { player.position.x += Math.sin(yaw) * speed; player.position.z += Math.cos(yaw) * speed; }
+                if(keys['KeyS']) { player.position.x -= Math.sin(yaw) * speed; player.position.z -= Math.cos(yaw) * speed; }
+                
+                player.rotation.y = yaw;
+
+                // Çarpışma Kontrolü
+                let pBox = new THREE.Box3().setFromObject(player);
+                for(let b of buildings) { if(pBox.intersectsBox(b)) player.position.copy(oldPos); }
+
+                // Kamera Takibi
+                camera.position.set(
+                    player.position.x - Math.sin(yaw) * 10,
+                    player.position.y + 5,
+                    player.position.z - Math.cos(yaw) * 10
+                );
+                camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+
+                renderer.render(scene, camera);
+            }
+            animate();
         }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 10, 200);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-        scene.add(light);
-
-        // --- ZEMİN, YOL VE KALDIRIM ---
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
-        ground.rotation.x = -Math.PI / 2; scene.add(ground);
-
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(20, 1000), new THREE.MeshPhongMaterial({ color: 0x111111 }));
-        road.rotation.x = -Math.PI / 2; road.position.y = 0.05; scene.add(road);
-
-        const curbGeo = new THREE.BoxGeometry(6, 0.4, 1000);
-        const curbMat = new THREE.MeshPhongMaterial({ color: 0x999999 });
-        const curbL = new THREE.Mesh(curbGeo, curbMat); curbL.position.set(-13, 0.2, 0); scene.add(curbL);
-        const curbR = new THREE.Mesh(curbGeo, curbMat); curbR.position.set(13, 0.2, 0); scene.add(curbR);
-
-        // --- BİNALAR ---
-        const binalar = [];
-        function createBuilding(x, z, rot) {
-            const h = 15 + Math.random() * 10;
-            const body = new THREE.Mesh(new THREE.BoxGeometry(10, h, 10), new THREE.MeshPhongMaterial({ color: 0xaaaaaa }));
-            body.position.set(x, h/2, z);
-            body.rotation.y = rot;
-            scene.add(body);
-            binalar.push(new THREE.Box3().setFromObject(body));
-        }
-
-        for(let i=0; i<30; i++) {
-            if(i % 5 === 0) continue; 
-            createBuilding(-21, -i*12 + 100, 0);
-            createBuilding(21, -i*12 + 100, 0);
-        }
-
-        // --- KARAKTER VE KAMERA ---
-        const player = new THREE.Group();
-        const pBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshPhongMaterial({color: 0x0055ff}));
-        pBody.position.y = 0.9; player.add(pBody);
-        scene.add(player);
-
-        let yaw = 0;
-        document.addEventListener('mousemove', (e) => { if(document.pointerLockElement) yaw -= e.movementX * 0.003; });
-        document.addEventListener('click', () => document.body.requestPointerLock());
-
-        let keys = {};
-        document.onkeydown = (e) => keys[e.code] = true;
-        document.onkeyup = (e) => keys[e.code] = false;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            let speed = 0.2;
-            let oldPos = player.position.clone();
-
-            if (keys['KeyW']) { player.position.x += Math.sin(yaw) * speed; player.position.z += Math.cos(yaw) * speed; }
-            if (keys['KeyS']) { player.position.x -= Math.sin(yaw) * speed; player.position.z -= Math.cos(yaw) * speed; }
-            
-            // Çarpışma Kontrolü
-            let pBox = new THREE.Box3().setFromObject(player);
-            for(let b of binalar) { if(pBox.intersectsBox(b)) player.position.copy(oldPos); }
-
-            // Yükseklik Kontrolü (Kaldırım)
-            player.position.y = (Math.abs(player.position.x) > 10) ? 0.4 : 0;
-
-            const camOffset = new THREE.Vector3(0, 4, 10).applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
-            camera.position.copy(player.position).add(camOffset);
-            camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
-
-            renderer.render(scene, camera);
-        }
-        animate();
     </script>
 </body>
 </html>
